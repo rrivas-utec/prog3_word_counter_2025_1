@@ -10,11 +10,13 @@
 #include <thread>
 #include <utility>
 
+/// Convertir string a minuscular
 static std::string to_lower(std::string str) {
     std::ranges::transform(str, str.begin(), ::tolower);
     return str;
 }
 
+/// Listado de archivo en función a un prefijo y extensión
 static std::vector<std::string> list_file_names(
     const std::string &path,
     const std::string &prefix,
@@ -29,11 +31,15 @@ static std::vector<std::string> list_file_names(
     return file_names;
 }
 
+/// Ordena map utilizando vector de referencias (iterators) para evitar copiar
+/// todo los items del mapa a otro contenedor
 static std::vector<MapType::const_iterator> sort_map(const MapType &map_words) {
+
+    // Contenedor de iterators de mapa
     std::vector<MapType::const_iterator> its;
     its.reserve(map_words.size());
 
-    // Copiar iterators
+    // Copiar iterators (referencias a valores
     for (auto it = map_words.cbegin(); it != map_words.cend(); ++it) {
         its.push_back(it);
     }
@@ -49,6 +55,7 @@ static std::vector<MapType::const_iterator> sort_map(const MapType &map_words) {
     return its;
 }
 
+/// Método que sera utilizado para implementar la tarea de cada Lector
 void WordCounterAggregator::reader_task(const std::string &filename) {
     std::ifstream file(filename);
     MapType word_counter;
@@ -71,6 +78,7 @@ void WordCounterAggregator::reader_task(const std::string &filename) {
     condition_.notify_one();
 }
 
+/// Método que sera utilizado para implementar la tarea del aggregator
 void WordCounterAggregator::aggregate_task() {
     int i = 0;
     while (i < n_files_) {
@@ -95,10 +103,12 @@ void WordCounterAggregator::aggregate_task() {
     }
 }
 
+/// Constructor con parámetros
 WordCounterAggregator::WordCounterAggregator(std::string path):
     path_(std::move(path)),
     n_files_(0) {}
 
+/// Método que inicializa el proceso
 void WordCounterAggregator::run(
     const std::string &file_pattern,
     const std::string &result_filename) {
@@ -113,8 +123,12 @@ void WordCounterAggregator::run(
     aggregator_thread_ = std::jthread(&WordCounterAggregator::aggregate_task, this);
 
     // Union de hilos
-    for (auto& reader : reader_threads_) reader.join();
-    aggregator_thread_.join();
+    for (auto& reader : reader_threads_)
+        if (reader.joinable()) reader.join();
+    if (aggregator_thread_.joinable()) aggregator_thread_.join();
+
+    // Limpiarlo para poder reutilizarlo
+    reader_threads_.clear();
 
     // Ordenar mapa
     const auto& result = sort_map(map_words_);
@@ -126,4 +140,7 @@ void WordCounterAggregator::run(
        [](auto a) {
            return a->first + ": " + std::to_string(a->second);
        });
+
+    // Limpiar mapa para reutilizarlo
+    map_words_.clear();
 }
