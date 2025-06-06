@@ -96,10 +96,9 @@ void WordCounterAggregator::aggregate_task() {
             // Combinar mapas
             join_maps(map_words_, temp_map,
                 [](auto a, auto b) { return a + b; });
+            // Incrementando contador
+            ++i;
         }
-
-        // Incrementando contador
-        ++i;
     }
 }
 
