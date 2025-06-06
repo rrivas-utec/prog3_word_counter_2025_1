@@ -74,10 +74,11 @@ void WordCounterAggregator::reader_task(const std::string &filename) {
 void WordCounterAggregator::aggregate_task() {
     int i = 0;
     while (i < n_files_) {
+
         // Sincronización de CONSUMIDOR - Durmiendo el hilo aggregator
         // si no hay valores en cola
         std::unique_lock lock(mutex_);
-        condition_.wait(lock, [this] { return! words_queue_.empty(); });
+        condition_.wait(lock, [this] { return !words_queue_.empty(); });
 
         // Descargando mapas temporales
         while (!words_queue_.empty()) {
